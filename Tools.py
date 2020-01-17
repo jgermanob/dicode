@@ -117,6 +117,24 @@ def removePunctuation(text_list):
     return clean_texts
 
 """
+Realiza el proceso de remoción de números de 
+los textos a clasificar
+"""
+def removeNumbers(text):
+    if bool(re.search(r'\d', text)):
+        text = re.sub('[0-9]{5,}', '#####', text)
+        text = re.sub('[0-9]{4}', '####', text)
+        text = re.sub('[0-9]{3}', '###', text)
+        text = re.sub('[0-9]{2}', '##', text)
+    return text
+
+def removeNumbersFromTexts(text_list):
+    clean_texts = []
+    for text in text_list:
+        clean_texts.append(removeNumbers(text))
+    return clean_texts
+
+"""
 Realiza el proceso de colocar los textos en una sola linea
 """
 def text2OneLineText(text):

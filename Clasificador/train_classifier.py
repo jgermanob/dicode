@@ -7,6 +7,7 @@ from sklearn.model_selection import KFold
 from sklearn.svm import SVC, LinearSVC
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 import pickle
@@ -14,6 +15,8 @@ sys.path.append('/home/German/Escritorio/dicode_personal')
 from Tools import *
 from nltk.stem.snowball import SnowballStemmer
 from nltk.corpus import stopwords
+#from imblearn.over_sampling import SMOTE
+from collections import Counter
 
 """
 Función que permite verificar que los argumentos
@@ -53,27 +56,31 @@ def get_features(dataframe, features, ngram):
     labelEncoder = LabelEncoder()
     stemmer = SnowballStemmer('spanish')
     sws = list(stopwords.words('spanish'))
+    dataframe = dataframe[(dataframe.area_trab == 'Administración') | (dataframe.area_trab == 'Call Center')]
     texts = [text for text in dataframe['texto']]
     targets = [target for target in dataframe['area_trab']]
-    # Preprocesamiento del texto
+    # Preprocesamiento del textoLogisticRegression()
     texts = normalize_text(texts)
-    texts = text2lowercase(texts)
-    texts = removeStopwords(texts,sws)
-    texts = removeAccentsFromText(texts)
-    texts = removePunctuation(texts)
+    #texts = text2lowercase(texts)
+    #texts = removeStopwords(texts,sws)
+    #texts = removeAccentsFromText(texts)
+    #texts = removePunctuation(texts)
+    #texts = removeNumbersFromTexts(texts)
     #texts = stemmingTexts(texts, stemmer)
-    texts = oneLineTexts(texts)
-    print(texts[0])
-    exit()
+    #texts = oneLineTexts(texts)
     if features == 'word':
-        vectorizer = TfidfVectorizer(ngram_range=(ngram,ngram))
+        vectorizer = CountVectorizer(ngram_range=(ngram,ngram))
         x = vectorizer.fit_transform(texts)
     elif features == 'char':
         vectorizer = CountVectorizer(ngram_range=(ngram,ngram), analyzer='char')
         x = vectorizer.fit_transform(texts)
     y = labelEncoder.fit_transform(targets)
+    #Over-sampling data using SMOTE
+    #sampler = SMOTE(k_neighbors=1)
+    #x, y = sampler.fit_resample(x, y)
+    #print(sorted(Counter(y).items()))
     save_models('labelEncoder.pkl',labelEncoder)
-    return x,y, vectorizer
+    return x, y, vectorizer
 
 """
 Función para guardar los modelos del clasificador,
@@ -88,12 +95,12 @@ def save_models(model_name, model):
 #######################################
 filename, features, ngram, model_name, vectorizer_name = verify_args(sys.argv)
 data = get_data(filename)
-x,y, vectorizer = get_features(data, features, ngram)
+x, y, vectorizer = get_features(data, features, ngram)
 accuracy_results = []
 precision_results = []
 recall_results = []
 f1_results = []
-classifier = LogisticRegression(multi_class='ovr')
+classifier = LinearSVC()
 
 #####################
 # Log de evaluación #
@@ -111,9 +118,9 @@ for train_index, test_index in kfold.split(x,y):
     y_pred = classifier.predict(x_test)
     #Evaluación del modelo
     accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='micro')
-    recall = recall_score(y_test, y_pred, average='micro')
-    f1 = f1_score(y_test, y_pred, average='micro')
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
     #report = classification_report(y_test, y_pred)
     #evaluation_file.write('{}\n'.format(report))
     evaluation_file.write(str(index) + '-fold: Accuracy = ' + str(accuracy) + '\n\tPrecision = ' + str(precision) + '\n\tRecall = ' + str(recall) + '\n\tF1-score = ' + str(f1) + '\n\n')
@@ -141,3 +148,4 @@ save_models(vectorizer_name, vectorizer)
 
 
 
+LogisticRegression()
