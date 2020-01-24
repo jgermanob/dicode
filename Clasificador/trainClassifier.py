@@ -5,10 +5,11 @@ import sys
 import chardet
 from sklearn.model_selection import KFold
 from sklearn.svm import SVC, LinearSVC
-from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import LabelEncoder
 import pickle
 sys.path.append('/home/German/Escritorio/dicode_personal')
@@ -33,7 +34,7 @@ def verify_args(argvs):
         else:
             print("El archivo no está en formato .csv")
             print(argvs[2].split('.'))
-            exit()
+            exit()    
         if argvs[4][0] == 'w':
             features = 'word'
             ngram_value = int(argvs[4][1])
@@ -97,8 +98,6 @@ de cada ejemplo necesarios para entrenar el sistema.
 """
 def get_features(dataframe, features, vect, ngram, preprocess_options, word_ngram=None, char_ngram=None):
     labelEncoder = LabelEncoder()
-    stemmer = SnowballStemmer('spanish')
-    sws = list(stopwords.words('spanish'))
     texts = [text for text in dataframe['texto']]
     targets = [target for target in dataframe['area_trab']]
     lowercase_option, stopwords_option, accents_option, punct_option, num_option, stemm_option, oneline_option = get_preprocessing_options(preprocess_options)
@@ -124,7 +123,8 @@ def get_features(dataframe, features, vect, ngram, preprocess_options, word_ngra
         char_vectorizer = get_vectorizer(vect, char_ngram)
         word_x = word_vectorizer.fit_transform(texts)
         char_x = char_vectorizer.fit_transform(texts)
-        x = hstack([word_x,char_x]).toarray()
+        #x = hstack([word_x,char_x]).toarray()
+        x = hstack([word_x,char_x])
     # Codificación de las etiquetas
     y = labelEncoder.fit_transform(targets)
     save_models('labelEncoder.pkl',labelEncoder)
@@ -144,11 +144,11 @@ def save_models(model_name, model):
 filename, features, vect, clf, ngram, model_name, vectorizer_name, char_ngram, word_ngram, preprocess_options, log_name = verify_args(sys.argv)
 data = get_data(filename)
 x, y = get_features(data, features, vect,ngram, preprocess_options, word_ngram, char_ngram)
-accuracy_results = []
-precision_results = []
-recall_results = []
-f1_results = []
-classifier = get_classifier(clf)
+#classifier = get_classifier(clf)
+svm_classifier = get_classifier('svm')
+nv_classifier = get_classifier('nv')
+lr_classifier = get_classifier('lr')
+rf_classifier = get_classifier('rf')
 
 #####################
 # Log de evaluación #
@@ -158,32 +158,62 @@ evaluation_file = open('Results/evaluation_{}.txt'.format(log_name), 'w', encodi
 evaluation_file.write('Preprocess: Lowercase:{}, stopwords:{}, accents:{}, punct:{}, numbers:{}, stemming:{}, one-line:{}\n'.format(lowercase_option,stopwords_option,accents_option,punct_option, num_option, stemm_option, oneline_option))
 evaluation_file.write('Features: {}, word_ngram= {} char_ngram= {}\n'.format(features, word_ngram, char_ngram))
 evaluation_file.write('Vectorizer:{}\n'.format(vect))
-evaluation_file.write('Model: ' + type(classifier).__name__ +'\n\n')
 
-kfold = KFold(n_splits=10)
-index = 1
-for train_index, test_index in kfold.split(x,y):
-    x_train, x_test = x[train_index], x[test_index]
-    y_train, y_test = y[train_index], y[test_index]
-    classifier.fit(x_train,y_train)
-    y_pred = classifier.predict(x_test)
-    #Evaluación del modelo
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='macro')
-    recall = recall_score(y_test, y_pred, average='macro')
-    f1 = f1_score(y_test, y_pred, average='macro')
-    #report = classification_report(y_test, y_pred)
-    #evaluation_file.write('{}\n'.format(report))
-    evaluation_file.write(str(index) + '-fold: Accuracy = ' + str(accuracy) + '\n\tPrecision = ' + str(precision) + '\n\tRecall = ' + str(recall) + '\n\tF1-score = ' + str(f1) + '\n\n')
-    accuracy_results.append(accuracy)
-    precision_results.append(precision)
-    recall_results.append(recall)
-    f1_results.append(f1)
-    index += 1
+x_train, x_test, y_train, y_test = train_test_split(x,y, test_size=0.30, random_state=42)
+#Training classifiers
+svm_classifier.fit(x_train,y_train)
+nv_classifier.fit(x_train,y_train)
+lr_classifier.fit(x_train,y_train)
+rf_classifier.fit(x_train,y_train)
+    
+#SVM
+y_pred = svm_classifier.predict(x_test)
+#Evaluación del modelo
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='macro')
+recall = recall_score(y_test, y_pred, average='macro')
+f1 = f1_score(y_test, y_pred, average='macro')
+evaluation_file.write('\n\nSupport Vector Machine:')
+evaluation_file.write('\nAccuracy = {}'.format(accuracy))
+evaluation_file.write('\nPrecision = {}'.format(precision))
+evaluation_file.write('\nRecall = {}'.format(recall))
+evaluation_file.write('\nF1-score = {}'.format(f1))
 
-evaluation_file.write('\n\nAccuracy (Average) = {}'.format(np.mean(accuracy_results)))
-evaluation_file.write('\nPrecision (Average) = {}'.format(np.mean(precision_results)))
-evaluation_file.write('\nRecall (Average) = {}'.format(np.mean(recall_results)))
-evaluation_file.write('\nF1-score (Average) = {}'.format(np.mean(f1_results)))
-save_models(model_name, classifier)
-#save_models(vectorizer_name, vectorizer)
+#Naive-Bayes
+y_pred = nv_classifier.predict(x_test)
+#Evaluación del modelo
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='macro')
+recall = recall_score(y_test, y_pred, average='macro')
+f1 = f1_score(y_test, y_pred, average='macro')
+evaluation_file.write('\n\nNaive Bayes:')
+evaluation_file.write('\nAccuracy = {}'.format(accuracy))
+evaluation_file.write('\nPrecision = {}'.format(precision))
+evaluation_file.write('\nRecall = {}'.format(recall))
+evaluation_file.write('\nF1-score = {}'.format(f1))
+
+#Logistic Regression
+y_pred = lr_classifier.predict(x_test)
+#Evaluación del modelo
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='macro')
+recall = recall_score(y_test, y_pred, average='macro')
+f1 = f1_score(y_test, y_pred, average='macro')
+evaluation_file.write('\n\nLogistic Regression:')
+evaluation_file.write('\nAccuracy = {}'.format(accuracy))
+evaluation_file.write('\nPrecision = {}'.format(precision))
+evaluation_file.write('\nRecall = {}'.format(recall))
+evaluation_file.write('\nF1-score = {}'.format(f1))
+
+# Random Forest
+y_pred = rf_classifier.predict(x_test)
+#Evaluación del modelo
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='macro')
+recall = recall_score(y_test, y_pred, average='macro')
+f1 = f1_score(y_test, y_pred, average='macro')
+evaluation_file.write('\n\nRandom forest:')
+evaluation_file.write('\nAccuracy = {}'.format(accuracy))
+evaluation_file.write('\nPrecision = {}'.format(precision))
+evaluation_file.write('\nRecall = {}'.format(recall))
+evaluation_file.write('\nF1-score = {}'.format(f1))
