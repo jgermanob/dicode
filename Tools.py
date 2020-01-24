@@ -3,7 +3,13 @@ import pandas as pd
 import pickle
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.svm import LinearSVC
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 import re
 
 """
@@ -25,6 +31,62 @@ def get_data(filename):
     encoding = get_encoding(filename)
     dataframe = pd.read_csv(filename, encoding=encoding)
     return dataframe
+
+def get_preprocessing_options(options_list):
+    lowercase_option = options_list[0]
+    stopwords_option = options_list[1]
+    accents_option = options_list[2]
+    punct_option = options_list[3]
+    num_option = options_list[4]
+    stemm_option = options_list[5]
+    oneline_option = options_list[6]
+    return lowercase_option, stopwords_option, accents_option, punct_option, num_option, stemm_option, oneline_option
+
+
+def preprocessing(texts,lowercase_option=False, stopwords_option=False, accents_option=False, punct_option=False, num_option=False, stemm_option=False, oneline_option=False):
+    texts = normalize_text(texts)
+    if lowercase_option == True:
+        texts = text2lowercase(texts)
+    if stopwords_option == True:
+        texts = removeStopwords(texts, list(stopwords.words('spanish')))
+    if accents_option == True:
+        texts = removeAccentsFromText(texts)
+    if punct_option == True:
+        texts = removePunctuation(texts)
+    if num_option == True:
+        texts = removeNumbersFromTexts(texts)
+    if stemm_option == True:
+        texts = stemmingTexts(texts, SnowballStemmer('spanish'))
+    if oneline_option == True:
+        texts = oneLineTexts(texts)
+    return texts
+
+"""
+Función para obtener los vectorizadores necesarios
+conforme a los parámetros de entrada
+"""
+def get_vectorizer(vect, ngram):
+    if vect == 'count':
+        vectorizer = CountVectorizer(ngram_range=(ngram,ngram))
+        return vectorizer
+    elif vect == 'tfidf':
+        vectorizer = TfidfVectorizer(ngram_range=(ngram,ngram))
+    return vectorizer
+
+"""
+Función para obtener el clasificador necesario
+conforme a los parámetros de entrada
+"""
+def get_classifier(clf):
+    if clf == 'svm':
+        classifier = LinearSVC()
+    elif clf == 'nv':
+        classifier = MultinomialNB()
+    elif clf == 'lr':
+        classifier = LogisticRegression()
+    elif clf == 'rf':
+        classifier = RandomForestClassifier()
+    return classifier
 
 """
 Función que permite cargar los modelos del clasificador
