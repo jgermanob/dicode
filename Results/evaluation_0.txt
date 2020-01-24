@@ -1,3 +1,0 @@
-Preprocess: Lowercase:True, stopwords:True, accents:False, punct:False, numbers:False, stemming:False, one-line:False
-Features: comb, word_ngram= 1 char_ngram= 1
-Vectorizer:count

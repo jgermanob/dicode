@@ -18,6 +18,7 @@ for ngrams in ngrams_options:
         print(preprocess)
         for vec in vectorizer_options:
             print(vec)
+            aux += 1
             os.system('python3 Clasificador/trainClassifier.py -i xample_bumeran.csv -f a{}{} -v {} -c {} -o classifier.pkl vectorizer.pkl {} {}'.format(ngrams[0],ngrams[1],vec,'svm',preprocess,aux))
                 
 
